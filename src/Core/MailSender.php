@@ -1,20 +1,19 @@
 <?php
 
-namespace Mail;
+namespace App\Core;
 
 use Mailgun\Mailgun;
 
 class MailSender {
     private $mailgun;
-    private $domain;
     private $sendAddress;
+    private $domain;
 
-    public function __construct() {
-        $apiKey = getenv('MAILGUN_API_KEY');
+    public function __construct($mailgunClient) {
         $domain = getenv('MAILGUN_DOMAIN');
         $sendAddress = getenv('MAILGUN_SENDER');
 
-        $this->mailgun = Mailgun::create($apiKey);
+        $this->mailgun = $mailgunClient;
         $this->domain = $domain;
         $this->sendAddress = $sendAddress;
     }

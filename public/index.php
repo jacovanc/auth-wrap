@@ -1,15 +1,19 @@
 <?php
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
-use Auth\AuthChecker;
-use Mail\MailSender;
+use App\Core\AuthChecker;
+use App\Core\MailSender;
 use Dotenv\Dotenv;
+use Mailgun\Mailgun;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../', '.env');
 $dotenv->load();
 
+# Create the dependencies
+$mailgunClient = Mailgun::create(getenv('MAILGUN_API_KEY'));
+$mailSender = new MailSender($mailgunClient);
+
 $authChecker = new AuthChecker();
-$mailSender = new MailSender();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     $email = $_POST['email'];
@@ -24,5 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     }
 } else {
     // Show the email input form
+    echo "Enter your email to access this staging site:";
     echo '<form method="post">Email: <input type="email" name="email"><input type="submit" value="Send Auth Link"></form>';
 }
