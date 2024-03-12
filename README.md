@@ -3,7 +3,7 @@ A basic authorization process developed for simple staging site(s) access.
 
 The idea is to create an auth flow that sits on top of a server. The nginx configuration for each website can point to auth-wrap (which ideally will be able to be hosted on a different server too) for authentication.
 auth-wrap will then show a login form before showing the requested webpage.
-Authentication will be done based on email address - sending a validation link to the users email if they have permission to access the site. Upon clicking the link, they are authed and redirected to the intended webpage.
+Authentication will be done based on email address - sending a validation link to the user's email if they have permission to access the site. Upon clicking the link, they are authed and redirected to the intended webpage.
 
 This is being created for the purpose of creating a simple staging-site authentication process. We want to show a login screen as a layer on top of the website that does not require editing any of the application code for the sites themselves. Instead the configuration is done at the server level via nginx. 
 
