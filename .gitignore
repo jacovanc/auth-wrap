@@ -1,0 +1,8 @@
+config/permissions.php
+/vendor/
+.env
+.phpunit.result.cache
+.phpunit.cache
+phpunit.xml.bak
+test_database.db
+database.db
