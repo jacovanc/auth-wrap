@@ -11,7 +11,7 @@ class AuthChecker {
 
     public function __construct($pdo) {
         $permissionsFile = $_ENV['PERMISSIONS_FILE'] ?? getenv('PERMISSIONS_FILE');
-        $path = __DIR__ . '/../..' . $permissionsFile;
+        $path = __DIR__ . '/../../' . $permissionsFile;
 
         if (!file_exists($path)) {
             throw new \Exception('Permissions file not found.');
