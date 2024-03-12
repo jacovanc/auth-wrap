@@ -2,13 +2,30 @@
 
 use PHPUnit\Framework\TestCase;
 
+use Dotenv\Dotenv;
+use App\Container;
+use App\App;
+
 # Simulate the auth flow and assert the expected behavior
 class IntegrationTest extends TestCase
 {
+    private $container;
 
     protected function setUp(): void
     {
+        require_once __DIR__ . '/../vendor/autoload.php';
+        
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/../', '.env-test');
+        $dotenv->load();
+        
+        // Setup dependency injection container
+        $this->container = new Container;
+        Container::setUpDependencies($this->container);
 
+        // Override the Mailgun dependency with a mock
+        $this->container->bind('Mailgun', function() {
+            return $this->createMock(\Mailgun\Mailgun::class);
+        });
     }
 
     # We need to refactor this so we can mock out dependencies
@@ -19,7 +36,8 @@ class IntegrationTest extends TestCase
             $_SERVER['HTTP_HOST'] = 'your-subdomain.localhost';
     
             ob_start(); // Start output buffering
-            include 'public/index.php'; // Execute the script
+            $app = new App($this->container); // Execute the application
+            $app->run();
             $output = ob_get_clean(); // Get the output
     
             // Assert the expected output
@@ -39,7 +57,8 @@ class IntegrationTest extends TestCase
             $_SERVER['HTTP_HOST'] = 'subdomain1.example.com';
 
             ob_start(); // Start output buffering
-            include 'public/index.php';
+            $app = new App($this->container); // Execute the application
+            $app->run();
             $output = ob_get_clean();
             
             $this->assertStringContainsString('Access link sent to your email.', $output);
@@ -58,7 +77,8 @@ class IntegrationTest extends TestCase
             $_SERVER['HTTP_HOST'] = 'subdomain1.example.com';
 
             ob_start(); // Start output buffering
-            include 'public/index.php';
+            $app = new App($this->container); // Execute the application
+            $app->run();
             $output = ob_get_clean();
             
             $this->assertStringContainsString('Access denied', $output);

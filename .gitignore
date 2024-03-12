@@ -1,3 +1,5 @@
 config/permissions.php
 /vendor/
 .env
+.phpunit.result.cache
+
