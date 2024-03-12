@@ -20,6 +20,7 @@ class Container {
         return isset($this->bindings[$key]);
     }
 
+    # This does not necessarily set up all dependencies, but it sets up the ones that are not environment-specific
     public static function setUpDependencies(Container $container) {
         // Setup dependency injection container
         $container->bind('Mailgun', function() {
@@ -29,6 +30,14 @@ class Container {
             return new \App\Core\MailSender(
                 $container->make('Mailgun')
             );
+        });
+        $container->bind('AuthChecker', function() use ($container) {
+            return new \App\Core\AuthChecker(
+                $container->make('PDO')
+            );
+        });
+        $container->bind('HeaderService', function() {
+            return new \App\Services\HeaderService();
         });
         return $container;
     }

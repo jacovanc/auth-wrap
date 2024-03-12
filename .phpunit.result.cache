@@ -1,1 +1,1 @@
-{"version":1,"defects":[],"times":{"IntegrationTest::testLoadAuth":0.014,"IntegrationTest::testSubmitEmailSuccess":0.003,"IntegrationTest::testSubmitEmailNoAccess":0}}
+{"version":1,"defects":{"IntegrationTest::testSubmitEmailSuccess":8,"IntegrationTest::testEmailLinkClicked":8,"IntegrationTest::testLoadAuth":8,"IntegrationTest::testSubmitEmailNoAccess":8},"times":{"IntegrationTest::testLoadAuth":0.019,"IntegrationTest::testSubmitEmailSuccess":0.006,"IntegrationTest::testSubmitEmailNoAccess":0.001,"IntegrationTest::testEmailLinkClicked":0.007}}
