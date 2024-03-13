@@ -36,7 +36,8 @@ class IntegrationTest extends TestCase
     public function testLoadAuth()
     {
         try {
-            $_SERVER['REQUEST_METHOD'] = 'POST';
+            $_SERVER['REQUEST_URI'] = '/login';
+            $_SERVER['REQUEST_METHOD'] = 'GET';
             $_SERVER['HTTP_HOST'] = 'your-subdomain.localhost';
     
             ob_start(); // Start output buffering
@@ -56,8 +57,9 @@ class IntegrationTest extends TestCase
    public function testSubmitEmailSuccess()
     {
        try {
-            $_POST['email'] = 'user1@example.com';
+            $_SERVER['REQUEST_URI'] = '/login';
             $_SERVER['REQUEST_METHOD'] = 'POST';
+            $_POST['email'] = 'user1@example.com';
             $_SERVER['HTTP_HOST'] = 'subdomain1.example.com';
 
             ob_start(); // Start output buffering
@@ -76,8 +78,9 @@ class IntegrationTest extends TestCase
     public function testSubmitEmailNoAccess()
     {
         try {
-            $_POST['email'] = 'noaccess@example.com';
+            $_SERVER['REQUEST_URI'] = '/login';
             $_SERVER['REQUEST_METHOD'] = 'POST';
+            $_POST['email'] = 'noaccess@example.com';
             $_SERVER['HTTP_HOST'] = 'subdomain1.example.com';
 
             ob_start(); // Start output buffering
@@ -115,11 +118,12 @@ class IntegrationTest extends TestCase
         // Extract the token 
         $token = explode('?token=', $emailLink)[1];
         $_GET['auth_token'] = $token;
+        $_SERVER['REQUEST_URI'] = '/confirm-email';
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['HTTP_HOST'] = 'subdomain1.example.com';
 
         // Assert that the $emailLink is valid
-        $this->assertStringContainsString('http://localhost:8000/auth?token=', $emailLink);
+        $this->assertStringContainsString('http://localhost:8000/confirm-email?token=', $emailLink);
 
         $app = new App($this->container); // Execute the application
         $app->run();

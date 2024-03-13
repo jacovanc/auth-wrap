@@ -28,20 +28,60 @@ class App {
             throw new \Exception('Invalid request. No Redirect URL specified.');
         }
         
-        if($this->isUserAuthenticated()) {
-            $this->redirect($redirect);
-        } else if(isset($_GET['auth_token'])) { # The token from the email link
-            $authToken = $_GET['auth_token'];
-            $this->handleEmailLinkClicked($authToken);
-        } else if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
-            $email = $_POST['email'];
-            $subdomain = $_SERVER['HTTP_HOST']; // Or extract subdomain logic
-            $this->handleEmailSubmit($email, $subdomain);
+        $uri = $_SERVER['REQUEST_URI'];
+
+        # Basic routing
+        if($uri === '/login' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $this->loginRoute();
+        } else if($uri === '/login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->emailSubmitRoute();
+        } else if($uri === '/validate') {
+            $this->validateRoute();
+        } else if ($uri === '/confirm-email') {
+            $this->confirmEmailRoute();
         } else {
-            $this->showSubmissionForm();
+            echo '404 Not Found';
         }
     }
 
+    # Shows a login form
+    public function loginRoute() {
+        unset($_SESSION['authenticated']);
+        $this->showSubmissionForm();
+    }
+
+    # Handles the email submission form
+    public function emailSubmitRoute() {
+        $email = $_POST['email'];
+        $subdomain = $_SERVER['HTTP_HOST']; // Or extract subdomain logic
+        $this->handleEmailSubmit($email, $subdomain);
+    }
+
+    # Checks if the user is logged in. Returns 200 if true, 401 if false.
+    # Used in nginx configuration to determine if the user is allowed to access the site.
+    # Also sets the auth cookie if not set
+    public function validateRoute() {
+        # Do we want to redirect here to the login page? Or leave it pure, and let the nginx config handle the redirect?
+        
+        if($this->isUserAuthenticated()) {
+            $this->headerService->send('HTTP/1.1 200 OK');
+        } else {
+            $this->headerService->send('HTTP/1.1 401 Unauthorized');
+        }
+    }
+
+    # The route that the user is redirected to from the email link
+    # The token is validated and the user is redirected to the original URL
+    public function confirmEmailRoute() {
+        if(!isset($_GET['auth_token'])) {
+            echo 'Invalid request.';
+        } else {
+            $authToken = $_GET['auth_token'];
+            $this->handleEmailLinkClicked($authToken);
+        }
+    }
+
+    # Private methods
     private function isUserAuthenticated() {
         return isset($_SESSION['authenticated']);
     }
@@ -65,7 +105,7 @@ class App {
     private function handleEmailLinkClicked($token) {
         // When the user is redirected from the email link
         if ($this->authChecker->validateToken($token)) {
-            $_SESSION['authenticated'] = true; // Or some other form of session management
+            $_SESSION['authenticated'] = true;
 
             // Check the original redirect from the database
             $redirect = $this->authChecker->getRedirectFromToken($token);
