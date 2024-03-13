@@ -38,7 +38,7 @@ class IntegrationTest extends TestCase
         try {
             $_SERVER['REQUEST_URI'] = '/login';
             $_SERVER['REQUEST_METHOD'] = 'GET';
-            $_SERVER['HTTP_HOST'] = 'your-subdomain.localhost';
+            $_SERVER['HTTP_X_ORIGINAL_URI'] = 'your-subdomain.localhost';
     
             ob_start(); // Start output buffering
             $app = new App($this->container); // Execute the application
@@ -60,7 +60,7 @@ class IntegrationTest extends TestCase
             $_SERVER['REQUEST_URI'] = '/login';
             $_SERVER['REQUEST_METHOD'] = 'POST';
             $_POST['email'] = 'user1@example.com';
-            $_SERVER['HTTP_HOST'] = 'subdomain1.example.com';
+            $_SERVER['HTTP_X_ORIGINAL_URI'] = 'subdomain1.example.com';
 
             ob_start(); // Start output buffering
             $app = new App($this->container); // Execute the application
@@ -81,7 +81,7 @@ class IntegrationTest extends TestCase
             $_SERVER['REQUEST_URI'] = '/login';
             $_SERVER['REQUEST_METHOD'] = 'POST';
             $_POST['email'] = 'noaccess@example.com';
-            $_SERVER['HTTP_HOST'] = 'subdomain1.example.com';
+            $_SERVER['HTTP_X_ORIGINAL_URI'] = 'subdomain1.example.com';
 
             ob_start(); // Start output buffering
             $app = new App($this->container); // Execute the application
@@ -120,7 +120,7 @@ class IntegrationTest extends TestCase
         $_GET['auth_token'] = $token;
         $_SERVER['REQUEST_URI'] = '/confirm-email';
         $_SERVER['REQUEST_METHOD'] = 'GET';
-        $_SERVER['HTTP_HOST'] = 'subdomain1.example.com';
+        $_SERVER['HTTP_X_ORIGINAL_URI'] = 'subdomain1.example.com';
 
         // Assert that the $emailLink is valid
         $this->assertStringContainsString('http://localhost:8000/confirm-email?token=', $emailLink);

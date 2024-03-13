@@ -23,10 +23,15 @@ class App {
     }
 
     public function run() {
-        $redirect = $_SERVER['HTTP_HOST'] ?? null;
-        if(!$redirect) {
-            throw new \Exception('Invalid request. No Redirect URL specified.');
-        }
+        // $redirect = $_SERVER['HTTP_X_ORIGINAL_URI'] ?? null;
+        // if(!$redirect) { # This is provided by the nginx configuration. If it's not there, we can't continue.
+        //     # If we are not in prod, we can use a default redirect
+        //     if($_ENV['APP_ENV'] !== 'production') {
+        //         $redirect = 'localhost:8000';
+        //     } else {
+        //         throw new \Exception('Invalid request. No Redirect URL specified.');
+        //     }
+        // }
         
         $uri = $_SERVER['REQUEST_URI'];
         $uri = explode('?', $uri)[0];
@@ -47,21 +52,23 @@ class App {
 
     # Shows a login form
     public function loginRoute() {
+        $redirect = $_GET['redirect'] ?? null;
+        if(!$redirect) {
+            throw new \Exception('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
+        }
         unset($_SESSION['authenticated']);
-        $redirect = $_SERVER['HTTP_HOST'];
         $this->showSubmissionForm($redirect);
     }
 
     # Handles the email submission form
     public function emailSubmitRoute() {
         $email = $_POST['email'];
-        $redirect = $_POST['redirect'] ?? $_SERVER['HTTP_HOST']; 
+        $redirect = $_POST['redirect'] ?? null;
         $this->handleEmailSubmit($email, $redirect);
     }
 
     # Checks if the user is logged in. Returns 200 if true, 401 if false.
     # Used in nginx configuration to determine if the user is allowed to access the site.
-    # Also sets the auth cookie if not set
     public function validateRoute() {
         # Do we want to redirect here to the login page? Or leave it pure, and let the nginx config handle the redirect?
         
@@ -93,9 +100,7 @@ class App {
         echo "Enter your email to access this staging site:";
         echo "<form method='post'>";
         echo "<input type='email' name='email'>";
-        if($redirect) {
-            echo "<input type='hidden' name='redirect' value='$redirect'>";
-        }
+        echo "<input type='hidden' name='redirect' value='$redirect'>";
         echo "<input type='submit' value='Submit'>";
     }
     
@@ -119,6 +124,7 @@ class App {
             // Check the original redirect from the database
             $redirect = $this->authChecker->getRedirectFromToken($token);
 
+            # Redirect the user back to the original URL. The nginx config for that site should then hit the validate endpoint in a new request.
             $this->redirect($redirect);
         } else {
             echo 'Invalid or expired token.';
