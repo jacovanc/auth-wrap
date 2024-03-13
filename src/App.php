@@ -54,6 +54,7 @@ class App {
     public function loginRoute() {
         $redirect = $_GET['redirect'] ?? null;
         if(!$redirect) {
+            echo "No redirect specified";
             throw new \Exception('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
         }
         unset($_SESSION['authenticated']);

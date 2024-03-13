@@ -46,7 +46,6 @@ http {
         # This is the definition of the redirect for the 401 responses. Again, this might be redirected from the auth service directly instead.
         # This includes the redirect as a get param
         location @error401 {
-            <!-- return 302 http://auth-service-host/login?redirect=$scheme://$host$request_uri; -->
             return 302 http://auth-service-host/login?redirect=$scheme://$host$request_uri;
         }
     }
