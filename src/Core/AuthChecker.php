@@ -10,7 +10,7 @@ class AuthChecker {
     private $db;
 
     public function __construct($pdo) {
-        $permissionsFile = $_ENV['PERMISSIONS_FILE'] ?? getenv('PERMISSIONS_FILE');
+        $permissionsFile = $_ENV['PERMISSIONS_FILE'];
         $path = __DIR__ . '/../../' . $permissionsFile;
 
         if (!file_exists($path)) {
@@ -41,12 +41,12 @@ class AuthChecker {
 
     # Generate an auth link for an unauthenticated user
     # Includes a token that expires in 1 hour
-    public function generateLink($email, $subdomain) {
-        $token = $this->generateToken($email, $subdomain);
+    public function generateLink($email, $redirect) {
+        $token = $this->generateToken($email, $redirect);
         $expires = time() + 3600; // 1 hour expiration
-        $this->storeTokenData($email, $subdomain, $token, $expires);
+        $this->storeTokenData($email, $redirect, $token, $expires);
 
-        return 'http://localhost:8000/confirm-email?token=' . $token;
+        return 'http://localhost:8000/confirm-email?auth_token=' . $token;
     }
 
     # Generate a unique token

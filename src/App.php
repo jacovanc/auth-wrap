@@ -29,6 +29,7 @@ class App {
         }
         
         $uri = $_SERVER['REQUEST_URI'];
+        $uri = explode('?', $uri)[0];
 
         # Basic routing
         if($uri === '/login' && $_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -47,14 +48,15 @@ class App {
     # Shows a login form
     public function loginRoute() {
         unset($_SESSION['authenticated']);
-        $this->showSubmissionForm();
+        $redirect = $_SERVER['HTTP_HOST'];
+        $this->showSubmissionForm($redirect);
     }
 
     # Handles the email submission form
     public function emailSubmitRoute() {
         $email = $_POST['email'];
-        $subdomain = $_SERVER['HTTP_HOST']; // Or extract subdomain logic
-        $this->handleEmailSubmit($email, $subdomain);
+        $redirect = $_POST['redirect'] ?? $_SERVER['HTTP_HOST']; 
+        $this->handleEmailSubmit($email, $redirect);
     }
 
     # Checks if the user is logged in. Returns 200 if true, 401 if false.
@@ -86,15 +88,22 @@ class App {
         return isset($_SESSION['authenticated']);
     }
 
-    private function showSubmissionForm() {
+    private function showSubmissionForm($redirect = null) {
         // Show the email input form
         echo "Enter your email to access this staging site:";
-        echo '<form method="post">Email: <input type="email" name="email"><input type="submit" value="Send Auth Link"></form>';
+        echo "<form method='post'>";
+        echo "<input type='email' name='email'>";
+        if($redirect) {
+            echo "<input type='hidden' name='redirect' value='$redirect'>";
+        }
+        echo "<input type='submit' value='Submit'>";
     }
     
-    private function handleEmailSubmit($email, $domain) {
+    private function handleEmailSubmit($email, $redirect) {
+        // Extract the subdomain and domain from the redirect URL (e.g. subdomain.example.com/endpoint -> subdomain.example.com)
+        $domain = explode('/', $redirect)[0];
         if ($this->authChecker->isAllowed($email, $domain)) {
-            $link = $this->authChecker->generateLink($email, $domain);
+            $link = $this->authChecker->generateLink($email, $redirect);
             $this->mailSender->sendAuthEmail($email, $link);
             echo 'Access link sent to your email.';
         } else {
@@ -117,6 +126,13 @@ class App {
     }
 
     private function redirect($url) {
-        $this->headerService->send("Location: https://$url");
+        $protocol = 'https://';
+
+        // If localhost, use http
+        if (strpos($url, 'localhost') !== false) {
+            $protocol = 'http://';
+        }
+
+        $this->headerService->send("Location: " . $protocol . $url);
     }
 }
