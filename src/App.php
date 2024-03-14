@@ -124,7 +124,7 @@ class App {
         return isset($_SESSION['authenticated']);
     }
 
-    private function showSubmissionForm($redirect = null) {
+    private function showSubmissionForm($redirect) {
         // Show the email input form
         echo "Enter your email to access this staging site:";
         echo "<form method='post'>";
