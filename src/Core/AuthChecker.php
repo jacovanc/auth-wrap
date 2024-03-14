@@ -66,7 +66,7 @@ class AuthChecker {
     }
 
     public function getDataFromToken($token) {
-        $stmt = $this->db->prepare("SELECT redirect FROM auth_tokens WHERE token = :token");
+        $stmt = $this->db->prepare("SELECT redirect, email FROM auth_tokens WHERE token = :token");
         $stmt->execute([':token' => $token]);
 
         $res = $stmt->fetch(PDO::FETCH_ASSOC);
