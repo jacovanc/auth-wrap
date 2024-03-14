@@ -66,14 +66,14 @@ class App {
     # Used in nginx configuration to determine if the user is allowed to access the site.
     public function validateRoute() {
         Log::info('Validating user access for original URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL');
-        if(!$this->isUserAuthenticated() || !isset($_SERVER['HTTP_X_ORIGINAL_URI'])) {
+        if(!$this->isUserAuthenticated() || !isset($_SERVER['HTTP_X_ORIGINAL_URL'])) {
             Log::info('User not authenticated or no original URI. Sending 401 Unauthorized.');
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
             return;
         }
-        if(isset($_SESSION['email']) && isset($_SERVER['HTTP_X_ORIGINAL_URI'])) {
+        if(isset($_SESSION['email']) && isset($_SERVER['HTTP_X_ORIGINAL_URL'])) {
             Log::info('User authenticated and original URI set. Checking permissions.');
-            $origin = $_SERVER['HTTP_X_ORIGINAL_URI'] ?? null;
+            $origin = $_SERVER['HTTP_X_ORIGINAL_URL'] ?? null;
             // Extract the subdomain.domain from the original URI
             $domain = explode('/', $origin)[0];
             Log::info('Extracted domain: ' . $domain);
@@ -90,10 +90,13 @@ class App {
     # The route that the user is redirected to from the email link
     # The token is validated and the user is redirected to the original URL
     public function confirmEmailRoute() {
+        Log::info('Confirm email route called.');
         if(!isset($_GET['auth_token'])) {
+            Log::info('Invalid request. No auth token specified.');
             echo 'Invalid request.';
         } else {
             $authToken = $_GET['auth_token'];
+            Log::info('Auth token specified. Handling email link clicked. Auth token: ' . $authToken ?? 'No auth token specified.');
             $this->handleEmailLinkClicked($authToken);
         }
     }
@@ -130,16 +133,22 @@ class App {
     private function handleEmailLinkClicked($token) {
         // When the user is redirected from the email link
         if ($this->authChecker->validateToken($token)) {
+            Log::info('Token is valid.');
             // Check the original redirect from the database
             $tokenData = $this->authChecker->getDataFromToken($token);
             $redirect = $tokenData['redirect'];
 
+            Log::info('Redirect determined from token: ' . $redirect ?? 'No redirect specified.');
+
             $_SESSION['authenticated'] = true;
             $_SESSION['email'] = $tokenData['email'];
 
+            Log::info('Setting session variables: authenticated = true, email = ' . $tokenData['email']);
+            Log::info('Redirecting to original URL: ' . $redirect);
             # Redirect the user back to the original URL. The nginx config for that site should then hit the validate endpoint in a new request.
             $this->redirect($redirect);
         } else {
+            Log::info('Invalid or expired token.');
             echo 'Invalid or expired token.';
         }
     }
