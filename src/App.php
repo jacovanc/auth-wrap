@@ -20,6 +20,7 @@ class App {
 
         # Ensure cookies are set on the top level domain, so that the auth service works for all sub-domain sites. They access the same cookies.
         session_set_cookie_params(['domain' => '.' . $_ENV['APP_TOP_LEVEL_DOMAIN'], 'secure' => true, 'httponly' => true, 'samesite' => 'Lax']);
+        session_name('auth-wrap-session');
         session_start();
     }
 
