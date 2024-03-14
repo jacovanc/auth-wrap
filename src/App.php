@@ -43,7 +43,7 @@ class App {
     # Shows a login form
     public function loginRoute() {
         $redirect = $_GET['redirect'] ?? null;
-            Log::info('Login route called with redirect: ' . $redirect ?? 'No redirect specified');
+        Log::info('Login route called with redirect: ' . $redirect ?? 'No redirect specified');
         
         if(!$redirect) {
             echo "No redirect specified";
@@ -65,7 +65,7 @@ class App {
     # Checks if the user is logged in. Returns 200 if true, 401 if false.
     # Used in nginx configuration to determine if the user is allowed to access the site.
     public function validateRoute() {
-        Log::info('Validatiing user access for original uri: ' . $_SERVER['HTTP_X_ORIGINAL_URI'] ?? 'No original URI');
+        Log::info('Validating user access for original URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL');
         if(!$this->isUserAuthenticated() || !isset($_SERVER['HTTP_X_ORIGINAL_URI'])) {
             Log::info('User not authenticated or no original URI. Sending 401 Unauthorized.');
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
