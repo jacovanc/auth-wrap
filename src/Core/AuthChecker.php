@@ -10,7 +10,7 @@ class AuthChecker {
     private $db;
 
     public function __construct($pdo) {
-        $permissionsFile = $_ENV['PERMISSIONS_FILE'] ?? getenv('PERMISSIONS_FILE');
+        $permissionsFile = $_ENV['PERMISSIONS_FILE'];
         $path = __DIR__ . '/../../' . $permissionsFile;
 
         if (!file_exists($path)) {
@@ -41,12 +41,17 @@ class AuthChecker {
 
     # Generate an auth link for an unauthenticated user
     # Includes a token that expires in 1 hour
-    public function generateLink($email, $subdomain) {
-        $token = $this->generateToken($email, $subdomain);
+    public function generateLink($email, $redirect) {
+        $token = $this->generateToken($email, $redirect);
         $expires = time() + 3600; // 1 hour expiration
-        $this->storeTokenData($email, $subdomain, $token, $expires);
-
-        return 'http://localhost:8000/auth?token=' . $token;
+        $this->storeTokenData($email, $redirect, $token, $expires);
+        
+        if (strpos($_ENV['APP_DOMAIN'], 'localhost') !== false) {
+            $scheme = 'http://';
+        } else {
+            $scheme = 'https://';
+        }
+        return $scheme . $_ENV['APP_DOMAIN'] . '/confirm-email?auth_token=' . $token;
     }
 
     # Generate a unique token
@@ -65,11 +70,16 @@ class AuthChecker {
         }
     }
 
-    public function getRedirectFromToken($token) {
-        $stmt = $this->db->prepare("SELECT redirect FROM auth_tokens WHERE token = :token");
+    public function getDataFromToken($token) {
+        $stmt = $this->db->prepare("SELECT redirect, email FROM auth_tokens WHERE token = :token");
         $stmt->execute([':token' => $token]);
 
-        return $stmt->fetch(PDO::FETCH_ASSOC)['redirect'] ?? null;
+        $res = $stmt->fetch(PDO::FETCH_ASSOC);
+        $data = [
+            'redirect' => $res['redirect'] ?? null,
+            'email' => $res['email'] ?? null,
+        ];
+        return $data;
     }
 
     # Validate the token and check if it's expired

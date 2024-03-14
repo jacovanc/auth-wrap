@@ -6,3 +6,4 @@ config/permissions.php
 phpunit.xml.bak
 test_database.db
 database.db
+storage
