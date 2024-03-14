@@ -68,6 +68,7 @@ class App {
         Log::info('Validating user access for original URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL');
 
         Log::info('Important values: ');
+        Log::info('Session ID: ' . session_id());
         Log::info('HTTP_X_ORIGINAL_URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL specified');
         Log::info('Email in session: ' . $_SESSION['email'] ?? 'No email in session');
         Log::info('Authenticated: ' . $_SESSION['authenticated'] ?? 'Not authenticated');
@@ -155,10 +156,11 @@ class App {
 
             Log::info('Redirect determined from token: ' . $redirect ?? 'No redirect specified.');
 
+            Log::info('Setting session variables: authenticated = true, email = ' . $tokenData['email']);
+            Log::info('Session ID: ' . session_id());
             $_SESSION['authenticated'] = true;
             $_SESSION['email'] = $tokenData['email'];
 
-            Log::info('Setting session variables: authenticated = true, email = ' . $tokenData['email']);
             Log::info('Redirecting to original URL: ' . $redirect);
             # Redirect the user back to the original URL. The nginx config for that site should then hit the validate endpoint in a new request.
             $this->redirect($redirect);
