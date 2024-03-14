@@ -70,7 +70,11 @@ class AuthChecker {
         $stmt->execute([':token' => $token]);
 
         $res = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $res;
+        $data = [
+            'redirect' => $res['redirect'] ?? null,
+            'email' => $res['email'] ?? null,
+        ];
+        return $data;
     }
 
     # Validate the token and check if it's expired

@@ -66,24 +66,36 @@ class App {
     # Used in nginx configuration to determine if the user is allowed to access the site.
     public function validateRoute() {
         Log::info('Validating user access for original URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL');
-        if(!$this->isUserAuthenticated() || !isset($_SERVER['HTTP_X_ORIGINAL_URL'])) {
-            Log::info('User not authenticated or no original URI. Sending 401 Unauthorized.');
+
+        Log::info('Important values: Original URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL' . ', Session email: ' . $_SESSION['email'] ?? 'No email in session' . ', Authenticated: ' . $_SESSION['authenticated'] ?? 'Not authenticated');
+
+        if(!$this->isUserAuthenticated()) {
+            Log::info('User not authenticated. Sending 401 Unauthorized.');
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
             return;
         }
-        if(isset($_SESSION['email']) && isset($_SERVER['HTTP_X_ORIGINAL_URL'])) {
-            Log::info('User authenticated and original URI set. Checking permissions.');
-            $origin = $_SERVER['HTTP_X_ORIGINAL_URL'] ?? null;
-            // Extract the subdomain.domain from the original URI
-            $domain = explode('/', $origin)[0];
-            Log::info('Extracted domain: ' . $domain);
-            if($this->authChecker->isAllowed($_SESSION['email'], $domain)) {
-                Log::info('User is allowed. Sending 200 OK.');
-                $this->headerService->send('HTTP/1.1 200 OK');
-            } else {
-                Log::info('User is not allowed. Sending 401 Unauthorized.');
-                $this->headerService->send('HTTP/1.1 401 Unauthorized');
-            }
+        if(!isset($_SERVER['HTTP_X_ORIGINAL_URL'])) {
+            Log::info('No original URI. Sending 401 Unauthorized.');
+            $this->headerService->send('HTTP/1.1 401 Unauthorized');
+            return;
+        }
+        if(!isset($_SESSION['email'])) {
+            Log::info('No email in session. Sending 401 Unauthorized.');
+            $this->headerService->send('HTTP/1.1 401 Unauthorized');
+            return;
+        }
+
+        Log::info('Checking permissions.');
+        $origin = $_SERVER['HTTP_X_ORIGINAL_URL'] ?? null;
+        // Extract the subdomain.domain from the original URI
+        $domain = explode('/', $origin)[0];
+        Log::info('Extracted domain: ' . $domain);
+        if($this->authChecker->isAllowed($_SESSION['email'], $domain)) {
+            Log::info('User is allowed. Sending 200 OK.');
+            $this->headerService->send('HTTP/1.1 200 OK');
+        } else {
+            Log::info('User is not allowed. Sending 401 Unauthorized.');
+            $this->headerService->send('HTTP/1.1 401 Unauthorized');
         }
     }
 
