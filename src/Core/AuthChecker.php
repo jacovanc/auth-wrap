@@ -45,7 +45,8 @@ class AuthChecker {
         $token = $this->generateToken($email, $redirect);
         $expires = time() + 3600; // 1 hour expiration
         $this->storeTokenData($email, $redirect, $token, $expires);
-        if($_ENV['APP_ENV'] === 'local') {
+        
+        if (strpos($_ENV['APP_DOMAIN'], 'localhost') !== false) {
             $scheme = 'http://';
         } else {
             $scheme = 'https://';

@@ -5,7 +5,6 @@ namespace App;
 use App\Core\Log;
 
 class App {
-
     protected $container;
 
     private $authChecker;
