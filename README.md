@@ -32,6 +32,7 @@ http {
                 proxy_pass https://auth-wrap.jacovan.co.uk/validate;
                 proxy_ssl_server_name on;
                 proxy_pass_request_body off;
+                proxy_set_header Cookie $http_cookie;  # Forward the cookies received from the client. This ensures the session ID from the auth service is used when validating
                 proxy_set_header Content-Length "";
                 proxy_set_header X-Original-URI $request_uri;
             }

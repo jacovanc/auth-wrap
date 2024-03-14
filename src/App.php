@@ -19,6 +19,8 @@ class App {
         $this->authChecker = $this->container->make('AuthChecker');
         $this->headerService = $this->container->make('HeaderService');
 
+        # Ensure cookies are set on the top level domain, so that the auth service works for all sub-domain sites. They access the same cookies.
+        session_set_cookie_params(['domain' => '.' . $_ENV['APP_DOMAIN'], 'secure' => true, 'httponly' => true, 'samesite' => 'Lax']);
         session_start();
     }
 
