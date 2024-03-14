@@ -43,8 +43,11 @@ class App {
     # Shows a login form
     public function loginRoute() {
         $redirect = $_GET['redirect'] ?? null;
+            Log::info('Login route called with redirect: ' . $redirect ?? 'No redirect specified');
+        
         if(!$redirect) {
             echo "No redirect specified";
+            Log::error('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
             throw new \Exception('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
         }
         unset($_SESSION['authenticated']);
@@ -55,6 +58,7 @@ class App {
     public function emailSubmitRoute() {
         $email = $_POST['email'];
         $redirect = $_POST['redirect'] ?? null;
+        Log::info('Email submit route called with email: ' . $email . ' and redirect: ' . $redirect);
         $this->handleEmailSubmit($email, $redirect);
     }
 
@@ -111,11 +115,14 @@ class App {
     private function handleEmailSubmit($email, $redirect) {
         // Extract the subdomain and domain from the redirect URL (e.g. subdomain.example.com/endpoint -> subdomain.example.com)
         $domain = explode('/', $redirect)[0];
+        Log::info('Extracted domain: ' . $domain);
         if ($this->authChecker->isAllowed($email, $domain)) {
+            Log::info('User is allowed. Sending access link to email.');
             $link = $this->authChecker->generateLink($email, $redirect);
             $this->mailSender->sendAuthEmail($email, $link);
             echo 'Access link sent to your email.';
         } else {
+            Log::info('User is not allowed. Access Denied.');
             echo 'Access denied.';
         }
     }
