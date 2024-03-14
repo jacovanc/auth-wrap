@@ -2,7 +2,7 @@
 
 namespace App;
 
-use App\Core\AuthChecker;
+use App\Core\Log;
 
 class App {
 
@@ -22,17 +22,7 @@ class App {
         session_start();
     }
 
-    public function run() {
-        // $redirect = $_SERVER['HTTP_X_ORIGINAL_URI'] ?? null;
-        // if(!$redirect) { # This is provided by the nginx configuration. If it's not there, we can't continue.
-        //     # If we are not in prod, we can use a default redirect
-        //     if($_ENV['APP_ENV'] !== 'production') {
-        //         $redirect = 'localhost:8000';
-        //     } else {
-        //         throw new \Exception('Invalid request. No Redirect URL specified.');
-        //     }
-        // }
-        
+    public function run() {       
         $uri = $_SERVER['REQUEST_URI'];
         $uri = explode('?', $uri)[0];
 
@@ -71,12 +61,25 @@ class App {
     # Checks if the user is logged in. Returns 200 if true, 401 if false.
     # Used in nginx configuration to determine if the user is allowed to access the site.
     public function validateRoute() {
-        # Do we want to redirect here to the login page? Or leave it pure, and let the nginx config handle the redirect?
-        
-        if($this->isUserAuthenticated()) {
-            $this->headerService->send('HTTP/1.1 200 OK');
-        } else {
+        Log::info('Validatiing user access for original uri: ' . $_SERVER['HTTP_X_ORIGINAL_URI'] ?? 'No original URI');
+        if(!$this->isUserAuthenticated() || !isset($_SERVER['HTTP_X_ORIGINAL_URI'])) {
+            Log::info('User not authenticated or no original URI. Sending 401 Unauthorized.');
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
+            return;
+        }
+        if(isset($_SESSION['email']) && isset($_SERVER['HTTP_X_ORIGINAL_URI'])) {
+            Log::info('User authenticated and original URI set. Checking permissions.');
+            $origin = $_SERVER['HTTP_X_ORIGINAL_URI'] ?? null;
+            // Extract the subdomain.domain from the original URI
+            $domain = explode('/', $origin)[0];
+            Log::info('Extracted domain: ' . $domain);
+            if($this->authChecker->isAllowed($_SESSION['email'], $domain)) {
+                Log::info('User is allowed. Sending 200 OK.');
+                $this->headerService->send('HTTP/1.1 200 OK');
+            } else {
+                Log::info('User is not allowed. Sending 401 Unauthorized.');
+                $this->headerService->send('HTTP/1.1 401 Unauthorized');
+            }
         }
     }
 
@@ -120,10 +123,12 @@ class App {
     private function handleEmailLinkClicked($token) {
         // When the user is redirected from the email link
         if ($this->authChecker->validateToken($token)) {
-            $_SESSION['authenticated'] = true;
-
             // Check the original redirect from the database
-            $redirect = $this->authChecker->getRedirectFromToken($token);
+            $tokenData = $this->authChecker->getDataFromToken($token);
+            $redirect = $tokenData['redirect'];
+
+            $_SESSION['authenticated'] = true;
+            $_SESSION['email'] = $tokenData['email'];
 
             # Redirect the user back to the original URL. The nginx config for that site should then hit the validate endpoint in a new request.
             $this->redirect($redirect);

@@ -65,11 +65,11 @@ class AuthChecker {
         }
     }
 
-    public function getRedirectFromToken($token) {
+    public function getDataFromToken($token) {
         $stmt = $this->db->prepare("SELECT redirect FROM auth_tokens WHERE token = :token");
         $stmt->execute([':token' => $token]);
 
-        return $stmt->fetch(PDO::FETCH_ASSOC)['redirect'] ?? null;
+        $res = $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     # Validate the token and check if it's expired
