@@ -67,7 +67,10 @@ class App {
     public function validateRoute() {
         Log::info('Validating user access for original URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL');
 
-        Log::info('Important values: Original URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL' . ', Session email: ' . $_SESSION['email'] ?? 'No email in session' . ', Authenticated: ' . $_SESSION['authenticated'] ?? 'Not authenticated');
+        Log::info('Important values: ');
+        Log::info('HTTP_X_ORIGINAL_URL: ' . $_SERVER['HTTP_X_ORIGINAL_URL'] ?? 'No original URL specified');
+        Log::info('Email in session: ' . $_SESSION['email'] ?? 'No email in session');
+        Log::info('Authenticated: ' . $_SESSION['authenticated'] ?? 'Not authenticated');
 
         if(!$this->isUserAuthenticated()) {
             Log::info('User not authenticated. Sending 401 Unauthorized.');
