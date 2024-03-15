@@ -24,8 +24,12 @@ class App {
         ini_set('session.gc_maxlifetime', $sessionDuration);
         
         # Ensure cookies are set on the top level domain, so that the auth service works for all sub-domain sites. They access the same cookies.
+        $domain = '.' . $_ENV['APP_TOP_LEVEL_DOMAIN'];
+        if($_ENV['APP_ENV'] === 'local') {
+            $domain = 'localhost';
+        }
         session_set_cookie_params([
-            'domain' => '.' . $_ENV['APP_TOP_LEVEL_DOMAIN'], 
+            'domain' => $domain,
             'lifetime' => $sessionDuration,
             'secure' => true, 
             'httponly' => true, 
@@ -165,7 +169,7 @@ class App {
     
     private function handleEmailSubmit($email, $redirect) {
         // Check if CSRF token is valid
-        if ($_POST['csrf_token'] != $_SESSION['csrf_token']) {
+        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_token']) {
             echo 'CSRF token mismatch.';
             return;
         }
