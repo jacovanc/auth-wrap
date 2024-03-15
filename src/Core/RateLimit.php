@@ -21,7 +21,6 @@ class RateLimit {
             ip_address VARCHAR(45),
             action_key VARCHAR(100),
             attempt_time DATETIME,
-            INDEX(ip_address, action_key)
         )");
     }
 
