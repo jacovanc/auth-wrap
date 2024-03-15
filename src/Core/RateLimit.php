@@ -41,7 +41,7 @@ class RateLimit {
         }
 
         // Record new attempt
-        $stmt = $this->db->prepare("INSERT INTO rate_limit (ip_address, action_key, attempt_time) VALUES (:ip, :key, NOW())");
+        $stmt = $this->db->prepare("INSERT INTO rate_limit (ip_address, action_key, attempt_time) VALUES (:ip, :key, datetime('now')");
         $stmt->execute(['ip' => $ip, 'key' => $key]);
 
         return false; // Not rate limited
