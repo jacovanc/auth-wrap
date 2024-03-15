@@ -77,14 +77,16 @@ class App {
     public function emailSubmitRoute() {
         # Check for rate limit to avoid email spam
         $ip = $_SERVER['REMOTE_ADDR'];
+        $email = $_POST['email'];
+        $redirect = $_POST['redirect'] ?? null;
+        
         $isRateLimited = $this->rateLimit->isRateLimited($ip, 'email_submit');
         if($isRateLimited) {
-            echo 'You have exceeded the rate limit. Please try again later.';
+            $error = "Too many requests. Please try again later.";
+            $this->showSubmissionForm($redirect, $error);
             return;
         }
 
-        $email = $_POST['email'];
-        $redirect = $_POST['redirect'] ?? null;
         Log::info('Email submit route called with email: ' . $email . ' and redirect: ' . $redirect);
         $this->handleEmailSubmit($email, $redirect);
     }
@@ -149,28 +151,19 @@ class App {
         return isset($_SESSION['authenticated']);
     }
 
-    private function showSubmissionForm($redirect) {
+    private function showSubmissionForm($redirect, $error = null, $success = null) {
         // Generate and store CSRF token in session if not already present
         if (!isset($_SESSION['csrf_token'])) {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
 
-        // Show the email input form
-        echo "Enter your email to access this staging site:";
-        echo "<form method='post'>";
-        echo "<input type='email' name='email'>";
-        echo "<input type='hidden' name='redirect' value='$redirect'>";
-        echo "<input type='hidden' name='csrf_token' value='" . $_SESSION['csrf_token'] . "'>";
-        echo "<div style='display:none;'>";
-        echo    "<input type='text' name='hp'>";
-        echo "</div>";
-        echo "<input type='submit' value='Submit'>";
+        include __DIR__ . '/../views/login.php';
     }
     
     private function handleEmailSubmit($email, $redirect) {
         // Check if CSRF token is valid
         if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_token']) {
-            echo 'CSRF token mismatch.';
+            $this->showSubmissionForm($redirect, 'Form expired. Please try again.');
             return;
         }
         // Unset the CSRF token to prevent re-use
@@ -190,12 +183,14 @@ class App {
             Log::info('User is allowed. Sending access link to email.');
             $link = $this->authChecker->generateLink($email, $redirect);
             $this->mailSender->sendAuthEmail($email, $link);
-            echo 'Access link sent to your email.';
+            $this->showSubmissionForm($redirect, null, "Access link sent to your email.");
             return;
         }
 
         Log::info('User is not allowed. Access Denied.');
-        echo 'Access denied.';
+
+        $error = "You don't have access to this site. Please contact the administrator for access.";
+        $this->showSubmissionForm($redirect, $error);
         return;
     }
 
