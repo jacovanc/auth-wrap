@@ -17,6 +17,7 @@ class App {
         $this->mailSender = $this->container->make('MailSender');
         $this->authChecker = $this->container->make('AuthChecker');
         $this->headerService = $this->container->make('HeaderService');
+        $this->rateLimit = $this->container->make('RateLimit');
 
         $sessionDuration = 3600 * 32; // 1 Day + 8 hours so it doesn't expire during the working day no matter when it was set
         ini_set('session.gc_maxlifetime', $sessionDuration);
@@ -67,6 +68,14 @@ class App {
 
     # Handles the email submission form
     public function emailSubmitRoute() {
+        # Check for rate limit to avoid email spam
+        $ip = $_SERVER['REMOTE_ADDR'];
+        $isRateLimited = $this->rateLimit->isRateLimited($ip, 'email_submit');
+        if($isRateLimited) {
+            echo 'You have exceeded the rate limit. Please try again later.';
+            return;
+        }
+
         $email = $_POST['email'];
         $redirect = $_POST['redirect'] ?? null;
         Log::info('Email submit route called with email: ' . $email . ' and redirect: ' . $redirect);
@@ -134,15 +143,39 @@ class App {
     }
 
     private function showSubmissionForm($redirect) {
+        // Generate and store CSRF token in session if not already present
+        if (!isset($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+
         // Show the email input form
         echo "Enter your email to access this staging site:";
         echo "<form method='post'>";
         echo "<input type='email' name='email'>";
         echo "<input type='hidden' name='redirect' value='$redirect'>";
+        echo "<input type='hidden' name='csrf_token' value='" . $_SESSION['csrf_token'] . "'>";
+        echo "<div style='display:none;'>";
+        echo    "<input type='text' name='hp'>";
+        echo "</div>";
         echo "<input type='submit' value='Submit'>";
     }
     
     private function handleEmailSubmit($email, $redirect) {
+        // Check if CSRF token is valid
+        if ($_POST['csrf_token'] != $_SESSION['csrf_token']) {
+            echo 'CSRF token mismatch.';
+            return;
+        }
+        // Unset the CSRF token to prevent re-use
+        unset($_SESSION['csrf_token']);
+
+        // Check if honeypot field is filled (it should be empty)
+        if (!empty($_POST['hp'])) {
+            // Possibly a bot
+            echo 'Access denied.';
+            return;
+        }
+        
         // Extract the subdomain and domain from the redirect URL (e.g. subdomain.example.com/endpoint -> subdomain.example.com)
         $domain = explode('/', $redirect)[0];
         Log::info('Extracted domain: ' . $domain);
@@ -151,16 +184,19 @@ class App {
             $link = $this->authChecker->generateLink($email, $redirect);
             $this->mailSender->sendAuthEmail($email, $link);
             echo 'Access link sent to your email.';
-        } else {
-            Log::info('User is not allowed. Access Denied.');
-            echo 'Access denied.';
+            return;
         }
+
+        Log::info('User is not allowed. Access Denied.');
+        echo 'Access denied.';
+        return;
     }
 
     private function handleEmailLinkClicked($token) {
         // When the user is redirected from the email link
         if ($this->authChecker->validateToken($token)) {
             Log::info('Token is valid.');
+
             // Check the original redirect from the database
             $tokenData = $this->authChecker->getDataFromToken($token);
             $redirect = $tokenData['redirect'];
