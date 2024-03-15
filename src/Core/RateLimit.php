@@ -20,7 +20,7 @@ class RateLimit {
             id INT AUTO_INCREMENT PRIMARY KEY,
             ip_address VARCHAR(45),
             action_key VARCHAR(100),
-            attempt_time DATETIME,
+            attempt_time DATETIME
         )");
     }
 
