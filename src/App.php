@@ -10,6 +10,7 @@ class App {
     private $authChecker;
     private $mailSender;
     private $headerService;
+    private $rateLimit;
 
     public function __construct($container) {
         $this->container = $container;
@@ -62,7 +63,9 @@ class App {
             Log::error('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
             throw new \Exception('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
         }
-        unset($_SESSION['authenticated']);
+        if(isset($_SESSION['authenticated'])) {
+            unset($_SESSION['authenticated']);
+        }
         $this->showSubmissionForm($redirect);
     }
 
