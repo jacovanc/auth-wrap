@@ -90,4 +90,12 @@ class AuthChecker {
         $res = $stmt->fetch(PDO::FETCH_ASSOC) !== false;
         return $res;
     }
+
+    # Invalidate the token after it's used
+    public function invalidateToken($token) {
+        $stmt = $this->db->prepare("DELETE FROM auth_tokens WHERE token = :token");
+        $stmt->execute([':token' => $token]);
+
+        return $stmt->rowCount() > 0;
+    }
 }

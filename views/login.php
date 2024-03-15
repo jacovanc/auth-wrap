@@ -65,6 +65,7 @@
             font-size: 1em;
             text-align: center;
             margin-bottom: 10px;
+            margin-top: 10px;
         }
     </style>
 </head>
