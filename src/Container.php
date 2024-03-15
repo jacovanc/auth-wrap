@@ -31,6 +31,11 @@ class Container {
                 $container->make('Mailgun')
             );
         });
+        $container->bind('RateLimit', function() use ($container) {
+            return new \App\Core\RateLimit(
+                $container->make('PDO')
+            );
+        });
         $container->bind('AuthChecker', function() use ($container) {
             return new \App\Core\AuthChecker(
                 $container->make('PDO')

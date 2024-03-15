@@ -10,6 +10,7 @@ class App {
     private $authChecker;
     private $mailSender;
     private $headerService;
+    private $rateLimit;
 
     public function __construct($container) {
         $this->container = $container;
@@ -17,9 +18,24 @@ class App {
         $this->mailSender = $this->container->make('MailSender');
         $this->authChecker = $this->container->make('AuthChecker');
         $this->headerService = $this->container->make('HeaderService');
+        $this->rateLimit = $this->container->make('RateLimit');
 
+        $sessionDuration = 3600 * 32; // 1 Day + 8 hours so it doesn't expire during the working day no matter when it was set
+        ini_set('session.gc_maxlifetime', $sessionDuration);
+        
         # Ensure cookies are set on the top level domain, so that the auth service works for all sub-domain sites. They access the same cookies.
-        session_set_cookie_params(['domain' => '.' . $_ENV['APP_TOP_LEVEL_DOMAIN'], 'secure' => true, 'httponly' => true, 'samesite' => 'Lax']);
+        $domain = '.' . $_ENV['APP_TOP_LEVEL_DOMAIN'];
+        if($_ENV['APP_ENV'] === 'local') {
+            $domain = 'localhost';
+        }
+        session_set_cookie_params([
+            'domain' => $domain,
+            'lifetime' => $sessionDuration,
+            'secure' => true, 
+            'httponly' => true, 
+            'samesite' => 'Lax'
+        ]);
+        session_name('auth-wrap-session');
         session_start();
     }
 
@@ -51,14 +67,26 @@ class App {
             Log::error('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
             throw new \Exception('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
         }
-        unset($_SESSION['authenticated']);
+        if(isset($_SESSION['authenticated'])) {
+            unset($_SESSION['authenticated']);
+        }
         $this->showSubmissionForm($redirect);
     }
 
     # Handles the email submission form
     public function emailSubmitRoute() {
+        # Check for rate limit to avoid email spam
+        $ip = $_SERVER['REMOTE_ADDR'];
         $email = $_POST['email'];
         $redirect = $_POST['redirect'] ?? null;
+        
+        $isRateLimited = $this->rateLimit->isRateLimited($ip, 'email_submit');
+        if($isRateLimited) {
+            $error = "Too many requests. Please try again later.";
+            $this->showSubmissionForm($redirect, $error);
+            return;
+        }
+
         Log::info('Email submit route called with email: ' . $email . ' and redirect: ' . $redirect);
         $this->handleEmailSubmit($email, $redirect);
     }
@@ -123,16 +151,31 @@ class App {
         return isset($_SESSION['authenticated']);
     }
 
-    private function showSubmissionForm($redirect) {
-        // Show the email input form
-        echo "Enter your email to access this staging site:";
-        echo "<form method='post'>";
-        echo "<input type='email' name='email'>";
-        echo "<input type='hidden' name='redirect' value='$redirect'>";
-        echo "<input type='submit' value='Submit'>";
+    private function showSubmissionForm($redirect, $error = null, $success = null) {
+        // Generate and store CSRF token in session if not already present
+        if (!isset($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+
+        include __DIR__ . '/../views/login.php';
     }
     
     private function handleEmailSubmit($email, $redirect) {
+        // Check if CSRF token is valid
+        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_token']) {
+            $this->showSubmissionForm($redirect, 'Form expired. Please try again.');
+            return;
+        }
+        // Unset the CSRF token to prevent re-use
+        unset($_SESSION['csrf_token']);
+
+        // Check if honeypot field is filled (it should be empty)
+        if (!empty($_POST['hp'])) {
+            // Possibly a bot
+            echo 'Access denied.';
+            return;
+        }
+        
         // Extract the subdomain and domain from the redirect URL (e.g. subdomain.example.com/endpoint -> subdomain.example.com)
         $domain = explode('/', $redirect)[0];
         Log::info('Extracted domain: ' . $domain);
@@ -140,17 +183,22 @@ class App {
             Log::info('User is allowed. Sending access link to email.');
             $link = $this->authChecker->generateLink($email, $redirect);
             $this->mailSender->sendAuthEmail($email, $link);
-            echo 'Access link sent to your email.';
-        } else {
-            Log::info('User is not allowed. Access Denied.');
-            echo 'Access denied.';
+            $this->showSubmissionForm($redirect, null, "Access link sent to your email.");
+            return;
         }
+
+        Log::info('User is not allowed. Access Denied.');
+
+        $error = "You don't have access to this site. Please contact the administrator for access.";
+        $this->showSubmissionForm($redirect, $error);
+        return;
     }
 
     private function handleEmailLinkClicked($token) {
         // When the user is redirected from the email link
         if ($this->authChecker->validateToken($token)) {
             Log::info('Token is valid.');
+
             // Check the original redirect from the database
             $tokenData = $this->authChecker->getDataFromToken($token);
             $redirect = $tokenData['redirect'];
@@ -161,6 +209,12 @@ class App {
             Log::info('Session ID: ' . session_id());
             $_SESSION['authenticated'] = true;
             $_SESSION['email'] = $tokenData['email'];
+
+            // Invalidate the token
+            $deleted = $this->authChecker->invalidateToken($token);
+            if(!$deleted) {
+                Log::info('Token could not be invalidated.');
+            }
 
             Log::info('Redirecting to original URL: ' . $redirect);
             # Redirect the user back to the original URL. The nginx config for that site should then hit the validate endpoint in a new request.
