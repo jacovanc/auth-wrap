@@ -11,6 +11,7 @@ class App {
     private $mailSender;
     private $headerService;
     private $rateLimit;
+    private $sessionService;
 
     public function __construct($container) {
         $this->container = $container;
@@ -19,42 +20,13 @@ class App {
         $this->authChecker = $this->container->make('AuthChecker');
         $this->headerService = $this->container->make('HeaderService');
         $this->rateLimit = $this->container->make('RateLimit');
-
-        $sessionDuration = 3600 * 32; // 1 Day + 8 hours so it doesn't expire during the working day no matter when it was set
-        ini_set('session.gc_maxlifetime', $sessionDuration);
-        
-        # Ensure cookies are set on the top level domain, so that the auth service works for all sub-domain sites. They access the same cookies.
-        // Function to get the main domain by removing the subdomain
-        function getMainDomain($host) {
-            $parts = explode('.', $host);
-            // Remove the first part (subdomain) and join the remaining parts
-            array_shift($parts);
-            return implode('.', $parts);
-        }
-        
-        // Determine the domain based on the current request
-        $domain = ($_ENV['APP_ENV'] === 'local') ? 'localhost' : getMainDomain($_SERVER['HTTP_HOST']);
-        
-        // Prefix with a dot to include all subdomains
-        if ($domain !== 'localhost') {
-            $domain = '.' . $domain;
-        }
-
-        Log::info('HTTP_HOST: ' . $_SERVER['HTTP_HOST'] ?? 'No HTTP_HOST specified');
-        Log::info('Setting session cookie params: domain = ' . $domain . ', lifetime = ' . $sessionDuration . ', secure = true, httponly = true, samesite = Lax');
-
-        session_set_cookie_params([
-            'domain' => $domain,
-            'lifetime' => $sessionDuration,
-            'secure' => true, 
-            'httponly' => true, 
-            'samesite' => 'Lax'
-        ]);
-        session_name('auth-wrap-session');
-        session_start();
+        $this->sessionService = $this->container->make('SessionService');
     }
 
     public function run() {       
+        # Start the session
+        $this->sessionService->startSession();
+
         $uri = $_SERVER['REQUEST_URI'];
         $uri = explode('?', $uri)[0];
 
@@ -82,9 +54,8 @@ class App {
             Log::error('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
             throw new \Exception('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
         }
-        if(isset($_SESSION['authenticated'])) {
-            unset($_SESSION['authenticated']);
-        }
+        $this->sessionService->removeAuthenticated();
+
         $this->showSubmissionForm($redirect);
     }
 
@@ -117,7 +88,7 @@ class App {
         Log::info('Email in session: ' . $_SESSION['email'] ?? 'No email in session');
         Log::info('Authenticated: ' . $_SESSION['authenticated'] ?? 'Not authenticated');
 
-        if(!$this->isUserAuthenticated()) {
+        if($this->sessionService->isAuthenticated()) {
             Log::info('User not authenticated. Sending 401 Unauthorized.');
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
             return;
@@ -127,7 +98,8 @@ class App {
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
             return;
         }
-        if(!isset($_SESSION['email'])) {
+        $email = $this->sessionService->get('email');
+        if(!isset($email)) {
             Log::info('No email in session. Sending 401 Unauthorized.');
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
             return;
@@ -138,7 +110,7 @@ class App {
         // Extract the subdomain.domain from the original URI
         $domain = explode('/', $origin)[0];
         Log::info('Extracted domain: ' . $domain);
-        if($this->authChecker->isAllowed($_SESSION['email'], $domain)) {
+        if($this->authChecker->isAllowed($email, $domain)) {
             Log::info('User is allowed. Sending 200 OK.');
             $this->headerService->send('HTTP/1.1 200 OK');
         } else {
@@ -161,28 +133,18 @@ class App {
         }
     }
 
-    # Private methods
-    private function isUserAuthenticated() {
-        return isset($_SESSION['authenticated']);
-    }
-
     private function showSubmissionForm($redirect, $error = null, $success = null) {
-        // Generate and store CSRF token in session if not already present
-        if (!isset($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
+        $this->sessionService->setCsrfToken();
 
         include __DIR__ . '/../views/login.php';
     }
     
     private function handleEmailSubmit($email, $redirect) {
         // Check if CSRF token is valid
-        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] != $_SESSION['csrf_token']) {
+        if(!$this->sessionService->validateCsrfToken($_POST['csrf_token'])) {
             $this->showSubmissionForm($redirect, 'Form expired. Please try again.');
             return;
         }
-        // Unset the CSRF token to prevent re-use
-        unset($_SESSION['csrf_token']);
 
         // Check if honeypot field is filled (it should be empty)
         if (!empty($_POST['hp'])) {
@@ -222,8 +184,7 @@ class App {
 
             Log::info('Setting session variables: authenticated = true, email = ' . $tokenData['email']);
             Log::info('Session ID: ' . session_id());
-            $_SESSION['authenticated'] = true;
-            $_SESSION['email'] = $tokenData['email'];
+            $this->sessionService->setAuthenticated($tokenData['email']);
 
             // Invalidate the token
             $deleted = $this->authChecker->invalidateToken($token);
