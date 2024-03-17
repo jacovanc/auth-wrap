@@ -24,20 +24,16 @@ class App {
         ini_set('session.gc_maxlifetime', $sessionDuration);
         
         # Ensure cookies are set on the top level domain, so that the auth service works for all sub-domain sites. They access the same cookies.
-        // Function to get the top level domain from a given host
-        function getTopLevelDomain($host) {
+        // Function to get the main domain by removing the subdomain
+        function getMainDomain($host) {
             $parts = explode('.', $host);
-            $numParts = count($parts);
-        
-            if ($numParts > 2) {
-                // Return the last two parts of the domain
-                return $parts[$numParts - 2] . '.' . $parts[$numParts - 1];
-            }
-            return $host;
+            // Remove the first part (subdomain) and join the remaining parts
+            array_shift($parts);
+            return implode('.', $parts);
         }
         
         // Determine the domain based on the current request
-        $domain = ($_ENV['APP_ENV'] === 'local') ? 'localhost' : getTopLevelDomain($_SERVER['HTTP_HOST']);
+        $domain = ($_ENV['APP_ENV'] === 'local') ? 'localhost' : getMainDomain($_SERVER['HTTP_HOST']);
         
         // Prefix with a dot to include all subdomains
         if ($domain !== 'localhost') {
