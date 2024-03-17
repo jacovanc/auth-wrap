@@ -46,12 +46,12 @@ class AuthChecker {
         $expires = time() + 3600; // 1 hour expiration
         $this->storeTokenData($email, $redirect, $token, $expires);
         
-        if (strpos($_ENV['APP_DOMAIN'], 'localhost') !== false) {
+        if (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
             $scheme = 'http://';
         } else {
             $scheme = 'https://';
         }
-        return $scheme . $_ENV['APP_DOMAIN'] . '/confirm-email?auth_token=' . $token;
+        return $scheme . $_SERVER['HTTP_HOST'] . '/confirm-email?auth_token=' . $token;
     }
 
     # Generate a unique token
