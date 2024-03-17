@@ -44,6 +44,7 @@ class App {
             $domain = '.' . $domain;
         }
 
+        Log::info('HTTP_HOST: ' . $_SERVER['HTTP_HOST'] ?? 'No HTTP_HOST specified');
         Log::info('Setting session cookie params: domain = ' . $domain . ', lifetime = ' . $sessionDuration . ', secure = true, httponly = true, samesite = Lax');
 
         session_set_cookie_params([
