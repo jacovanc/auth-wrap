@@ -43,7 +43,9 @@ class App {
         if ($domain !== 'localhost') {
             $domain = '.' . $domain;
         }
-        
+
+        Log::info('Setting session cookie params: domain = ' . $domain . ', lifetime = ' . $sessionDuration . ', secure = true, httponly = true, samesite = Lax');
+
         session_set_cookie_params([
             'domain' => $domain,
             'lifetime' => $sessionDuration,
