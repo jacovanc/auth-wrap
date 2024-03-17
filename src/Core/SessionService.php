@@ -55,8 +55,7 @@ class SessionService {
     }
 
     public function validateCsrfToken($token) {
-        Log::info('Validating CSRF token: ' . $token ?? 'No token specified');
-        Log::info('Session CSRF token: ' . $_SESSION['csrf_token'] ?? 'No session token specified');
+        Log::info('Validating CSRF token');
         if (!isset($token) || $token != $_SESSION['csrf_token']) {
             Log::info('CSRF token invalid.');
             return false;
