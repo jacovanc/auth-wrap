@@ -88,16 +88,18 @@ class App {
         Log::info('Email in session: ' . $_SESSION['email'] ?? 'No email in session');
         Log::info('Authenticated: ' . $_SESSION['authenticated'] ?? 'Not authenticated');
 
-        if($this->sessionService->isAuthenticated()) {
+        if(!$this->sessionService->isAuthenticated()) {
             Log::info('User not authenticated. Sending 401 Unauthorized.');
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
             return;
         }
+        
         if(!isset($_SERVER['HTTP_X_ORIGINAL_URL'])) {
             Log::info('No original URI. Sending 401 Unauthorized.');
             $this->headerService->send('HTTP/1.1 401 Unauthorized');
             return;
         }
+
         $email = $this->sessionService->get('email');
         if(!isset($email)) {
             Log::info('No email in session. Sending 401 Unauthorized.');
