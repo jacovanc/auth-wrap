@@ -36,26 +36,26 @@ http {
         listen 80;
 
         location / {
-                auth_request /auth; # Define the internal location for auth checks
-                error_page 401 = @error401; # Define what happens on 401 error
-                
-                # Whatever config you have here for the resource.
-            }
+            auth_request /auth; # Define the internal location for auth checks
+            error_page 401 = @error401; # Define what happens on 401 error
             
-            # Define the service to call for auth validation
-            location = /auth {
-                internal;
-                proxy_pass https://auth-wrap.example.co.uk/validate;
-                proxy_ssl_server_name on; # This was needed to get SSL checks to pass. Not entirely sure why.
-                proxy_pass_request_body off;
-                proxy_set_header Cookie $http_cookie;  # Forward the cookies received from the client. This ensures the session ID from the auth service is used when validating.
-                proxy_set_header Content-Length "";
-                proxy_set_header X-Original-URL $host$request_uri; # Pass the intended destination, used by the auth service for validation and redirection.
-            }
-        
-            location @error401 {
-                return 302 https://auth-wrap.example.co.uk/login?redirect=$host$request_uri;
-            }
+            # Whatever config you have here for the resource.
+        }
+            
+        # Define the service to call for auth validation
+        location = /auth {
+            internal;
+            proxy_pass https://auth-wrap.example.co.uk/validate;
+            proxy_ssl_server_name on; # This was needed to get SSL checks to pass. Not entirely sure why.
+            proxy_pass_request_body off;
+            proxy_set_header Cookie $http_cookie;  # Forward the cookies received from the client. This ensures the session ID from the auth service is used when validating.
+            proxy_set_header Content-Length "";
+            proxy_set_header X-Original-URL $host$request_uri; # Pass the intended destination, used by the auth service for validation and redirection.
+        }
+    
+        location @error401 {
+            return 302 https://auth-wrap.example.co.uk/login?redirect=$host$request_uri;
+        }
     }
 }
 ```

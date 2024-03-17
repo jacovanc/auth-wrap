@@ -23,6 +23,9 @@ class Container {
     # This does not necessarily set up all dependencies, but it sets up the ones that are not environment-specific
     public static function setUpDependencies(Container $container) {
         // Setup dependency injection container
+        $container->bind('SessionService', function() {
+            return new \App\Core\SessionService();
+        });
         $container->bind('Mailgun', function() {
             return Mailgun::create($_ENV['MAILGUN_API_KEY'], $_ENV['MAILGUN_API_BASE_URL'] ?? null);
         });
