@@ -18,12 +18,19 @@ class MailSender {
         $this->sendAddress = $sendAddress;
     }
 
-    public function sendAuthEmail($email, $link) {
-        $this->mailgun->messages()->send($this->domain, [
-            'from'    => $this->sendAddress,
-            'to'      => $email,
-            'subject' => 'Authorization Link',
-            'text'    => 'Use this link to authenticate: ' . $link
-        ]);
+    public function sendAuthEmail($email, $link): bool {
+        try {
+            $this->mailgun->messages()->send($this->domain, [
+                'from'    => $this->sendAddress,
+                'to'      => $email,
+                'subject' => 'Authorization Link',
+                'text'    => 'Use this link to authenticate: ' . $link
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Error sending email: ' . $e->getMessage());
+            return false;
+        }
     }
 }

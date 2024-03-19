@@ -161,7 +161,11 @@ class App {
         if ($this->authChecker->isAllowed($email, $domain)) {
             Log::info('User is allowed. Sending access link to email.');
             $link = $this->authChecker->generateLink($email, $redirect);
-            $this->mailSender->sendAuthEmail($email, $link);
+            $success = $this->mailSender->sendAuthEmail($email, $link);
+            if(!$success) {
+                $this->showSubmissionForm($redirect, 'Error sending email. Please try again.');
+                return;
+            }
             $this->showSubmissionForm($redirect, null, "Access link sent to your email.");
             return;
         }
