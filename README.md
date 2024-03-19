@@ -38,7 +38,7 @@ composer install
 - Copy config/permissions-example.php to a new file.
 - Set up domain-based email permissions as required.
 3. **Run the Service**
-- Host the service as you would do any PHP project. This includes pointing a domain to it (make sure the top level domain is the same as any of the websites you want to use it with)
+- Host the service as you would do any PHP project. This includes pointing a domain to it (make sure the top-level domain is the same as any of the websites you want to use it with)
 - Update Nginx configurations for the applicable websites to point to the Auth-Wrap host. 
 
 ## Nginx Configuration Example
