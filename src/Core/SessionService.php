@@ -5,9 +5,16 @@ namespace App\Core;
 class SessionService {
 
     public function startSession() {
+        # Set the session save path so that the sessions settings don't conflict with other sites on the same server
+        $sessionSavePath = __DIR__ . "/../../sessions";
+        if (!is_dir($sessionSavePath)) {
+            mkdir($sessionSavePath);
+        }
+        session_save_path($sessionSavePath);
+        Log::info('Session save path set to ' . $sessionSavePath);
+
         $sessionDuration = 3600 * 32; // 1 Day + 8 hours so it doesn't expire during the working day no matter when it was set
         ini_set('session.gc_maxlifetime', $sessionDuration);
-        
         Log::info('Session duration is set to ' . ini_get('session.gc_maxlifetime'));
 
         # Ensure cookies are set on the top level domain, so that the auth service works for all sub-domain sites. They access the same cookies.
