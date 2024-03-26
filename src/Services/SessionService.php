@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Core;
+namespace App\Services;
+
+use App\Core\Log;
 
 class SessionService {
 

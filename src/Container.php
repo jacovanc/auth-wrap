@@ -24,7 +24,7 @@ class Container {
     public static function setUpDependencies(Container $container) {
         // Setup dependency injection container
         $container->bind('SessionService', function() {
-            return new \App\Core\SessionService();
+            return new \App\Services\SessionService();
         });
         $container->bind('Mailgun', function() {
             return Mailgun::create($_ENV['MAILGUN_API_KEY'], $_ENV['MAILGUN_API_BASE_URL'] ?? null);
