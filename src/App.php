@@ -200,32 +200,32 @@ class App {
 
     private function handleEmailLinkClicked($token) {
         // When the user is redirected from the email link
-        if ($this->authChecker->validateToken($token)) {
-            Log::info('Token is valid.');
-
-            // Check the original redirect from the database
-            $tokenData = $this->authChecker->getDataFromToken($token);
-            $redirect = $tokenData['redirect'];
-
-            Log::info('Redirect determined from token: ' . $redirect ?? 'No redirect specified.');
-
-            Log::info('Setting session variables: authenticated = true, email = ' . $tokenData['email']);
-            Log::info('Session ID: ' . session_id());
-            $this->sessionService->setAuthenticated($tokenData['email']);
-
-            // Invalidate the token
-            $deleted = $this->authChecker->invalidateToken($token);
-            if(!$deleted) {
-                Log::info('Token could not be invalidated.');
-            }
-
-            Log::info('Redirecting to original URL: ' . $redirect);
-            # Redirect the user back to the original URL. The nginx config for that site should then hit the validate endpoint in a new request.
-            $this->redirect($redirect);
-        } else {
+        if (!$this->authChecker->validateToken($token)) {
             Log::info('Invalid or expired token.');
             echo 'Invalid or expired token.';
         }
+
+        Log::info('Token is valid.');
+
+        // Check the original redirect from the database
+        $tokenData = $this->authChecker->getDataFromToken($token);
+        $redirect = $tokenData['redirect'];
+
+        Log::info('Redirect determined from token: ' . $redirect ?? 'No redirect specified.');
+
+        Log::info('Setting session variables: authenticated = true, email = ' . $tokenData['email']);
+        Log::info('Session ID: ' . session_id());
+        $this->sessionService->setAuthenticated($tokenData['email']);
+
+        // Invalidate the token
+        $deleted = $this->authChecker->invalidateToken($token);
+        if(!$deleted) {
+            Log::info('Token could not be invalidated.');
+        }
+
+        Log::info('Redirecting to original URL: ' . $redirect);
+        # Redirect the user back to the original URL. The nginx config for that site should then hit the validate endpoint in a new request.
+        $this->redirect($redirect);
     }
 
     private function redirect($url) {
