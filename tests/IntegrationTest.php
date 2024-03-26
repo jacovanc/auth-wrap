@@ -64,6 +64,9 @@ class IntegrationTest extends TestCase
             $_POST['redirect'] = 'subdomain1.example.com';
             $_SERVER['HTTP_X_ORIGINAL_URL'] = 'subdomain1.example.com';
 
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            $_POST['csrf_token'] = $_SESSION['csrf_token'] ?? null;
+
             ob_start(); // Start output buffering
             $app = new App($this->container); // Execute the application
             $app->run();
@@ -83,14 +86,18 @@ class IntegrationTest extends TestCase
             $_SERVER['REQUEST_URI'] = '/login';
             $_SERVER['REQUEST_METHOD'] = 'POST';
             $_POST['email'] = 'noaccess@example.com';
+            $_POST['redirect'] = 'subdomain1.example.com';
             $_SERVER['HTTP_X_ORIGINAL_URI'] = 'subdomain1.example.com';
+
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            $_POST['csrf_token'] = $_SESSION['csrf_token'] ?? null;
 
             ob_start(); // Start output buffering
             $app = new App($this->container); // Execute the application
             $app->run();
             $output = ob_get_clean();
             
-            $this->assertStringContainsString('Access denied', $output);
+            $this->assertStringContainsString('You don\'t have access to this site.', $output);
         } catch (\Exception $e) {
             $output = ob_end_clean(); // Ensure buffer is closed in case of exception
             echo $output;
@@ -114,21 +121,23 @@ class IntegrationTest extends TestCase
         // Make the private method public
         $method = new ReflectionMethod($authChecker, 'generateLink');
         $method->setAccessible(true);
+        
+        $_SERVER['REQUEST_URI'] = '/confirm-email';
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['HTTP_X_ORIGINAL_URI'] = 'subdomain1.example.com';
+        $_SERVER['HTTP_HOST'] = 'localhost:8000';
+
         // Generate a real token
-        $emailLink = $method->invoke($authChecker, 'example@gmail.com', 'subdomain1.example.com');
+        $emailLink = $method->invoke($authChecker, 'user1@example.com', 'subdomain1.example.com');
 
         // Extract the token 
         $token = explode('?auth_token=', $emailLink)[1];
         $_GET['auth_token'] = $token;
-        $_SERVER['REQUEST_URI'] = '/confirm-email';
-        $_SERVER['REQUEST_METHOD'] = 'GET';
-        $_SERVER['HTTP_X_ORIGINAL_URI'] = 'subdomain1.example.com';
-
+       
         // Assert that the $emailLink is valid
         $this->assertStringContainsString('http://localhost:8000/confirm-email?auth_token=', $emailLink);
 
         $app = new App($this->container); // Execute the application
         $app->run();
     }
-    
 }

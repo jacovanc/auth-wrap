@@ -63,9 +63,10 @@ class App {
     public function emailSubmitRoute() {
         # Check for rate limit to avoid email spam
         $ip = $_SERVER['REMOTE_ADDR'];
-        $email = $_POST['email'];
+        $email = $_POST['email'] ?? null;
         $redirect = $_POST['redirect'] ?? null;
-        
+
+        // Check rate limits for IP
         $isRateLimited = $this->rateLimit->isRateLimited($ip, 'email_submit');
         if($isRateLimited) {
             $error = "Too many requests. Please try again later.";
@@ -73,6 +74,30 @@ class App {
             return;
         }
 
+        // Check if CSRF token is valid
+        if(!$this->sessionService->validateCsrfToken($_POST['csrf_token'])) {
+            $this->showSubmissionForm($redirect, 'Form expired. Please try again.');
+            return;
+        }
+
+        // Check if honeypot field is filled (it should be empty)
+        if (!empty($_POST['hp'])) {
+            $this->showSubmissionForm($redirect, 'Access denied.');
+            return;
+        }
+
+        // Basic validation
+        $email = filter_var($email, FILTER_VALIDATE_EMAIL);
+
+        $redirect = "https://" . $redirect; // The redirect from Nginx will never contain a protocol, and we want to force HTTPS
+        $redirect = filter_var($redirect, FILTER_VALIDATE_URL); // This will later also be checked against a whitelist of allowed domains inside the handleEmailSubmit function, which prevents open redirect exploits
+
+        if(!$email || !$redirect) {
+            $error = "Invalid request. Please try again.";
+            $this->showSubmissionForm($redirect, $error);
+            return;
+        }
+        
         Log::info('Email submit route called with email: ' . $email . ' and redirect: ' . $redirect);
         $this->handleEmailSubmit($email, $redirect);
     }
@@ -141,23 +166,14 @@ class App {
         include __DIR__ . '/../views/login.php';
     }
     
-    private function handleEmailSubmit($email, $redirect) {
-        // Check if CSRF token is valid
-        if(!$this->sessionService->validateCsrfToken($_POST['csrf_token'])) {
-            $this->showSubmissionForm($redirect, 'Form expired. Please try again.');
-            return;
-        }
+    private function handleEmailSubmit($email, $redirect) {       
+        // Extract the subdomain and domain from the redirect URL (e.g. https://subdomain.example.com/endpoint -> subdomain.example.com)
+        $components = parse_url($redirect);
+        $domain = $components['host'] ?? null;
 
-        // Check if honeypot field is filled (it should be empty)
-        if (!empty($_POST['hp'])) {
-            // Possibly a bot
-            echo 'Access denied.';
-            return;
-        }
-        
-        // Extract the subdomain and domain from the redirect URL (e.g. subdomain.example.com/endpoint -> subdomain.example.com)
-        $domain = explode('/', $redirect)[0];
         Log::info('Extracted domain: ' . $domain);
+
+        // Check if the user is allowed to access the subdomain (this also inherently checks if the domain is whitelisted)
         if ($this->authChecker->isAllowed($email, $domain)) {
             Log::info('User is allowed. Sending access link to email.');
             $link = $this->authChecker->generateLink($email, $redirect);
