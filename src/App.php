@@ -89,7 +89,12 @@ class App {
         // Basic validation
         $email = filter_var($email, FILTER_VALIDATE_EMAIL);
 
-        $redirect = "https://" . $redirect; // The redirect from Nginx will never contain a protocol, and we want to force HTTPS
+        // If localhost, use http otherwise https
+        if (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
+            $redirect = "http://" . $redirect;
+        } else {
+            $redirect = "https://" . $redirect; // The redirect from Nginx will never contain a protocol, and we want to force HTTPS
+        }
         $redirect = filter_var($redirect, FILTER_VALIDATE_URL); // This will later also be checked against a whitelist of allowed domains inside the handleEmailSubmit function, which prevents open redirect exploits
 
         if(!$email || !$redirect) {
@@ -224,13 +229,6 @@ class App {
     }
 
     private function redirect($url) {
-        $protocol = 'https://';
-
-        // If localhost, use http
-        if (strpos($url, 'localhost') !== false) {
-            $protocol = 'http://';
-        }
-
-        $this->headerService->send("Location: " . $protocol . $url);
+        $this->headerService->send("Location: " . $url);
     }
 }
