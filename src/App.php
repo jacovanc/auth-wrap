@@ -63,8 +63,10 @@ class App {
     public function emailSubmitRoute() {
         # Check for rate limit to avoid email spam
         $ip = $_SERVER['REMOTE_ADDR'];
-        $email = $_POST['email'] ?? null;
+        $email = $_POST['email'] ?? null ?? null;
         $redirect = $_POST['redirect'] ?? null;
+
+        // Check rate limits for IP
 
         // Check rate limits for IP
         $isRateLimited = $this->rateLimit->isRateLimited($ip, 'email_submit');
