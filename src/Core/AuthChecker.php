@@ -1,8 +1,9 @@
-<?php
+<?php declare(strict_types=1); 
 
 
 namespace App\Core;
 
+use App\Helper;
 use PDO;
 
 class AuthChecker {
@@ -46,12 +47,12 @@ class AuthChecker {
         $expires = time() + 3600; // 1 hour expiration
         $this->storeTokenData($email, $redirect, $token, $expires);
         
-        if (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
-            $scheme = 'http://';
-        } else {
-            $scheme = 'https://';
+        $link = $_SERVER['HTTP_HOST'];
+        if($link) {
+            $link = Helper::addSchema($_SERVER['HTTP_HOST']);
         }
-        return $scheme . $_SERVER['HTTP_HOST'] . '/confirm-email?auth_token=' . $token;
+
+        return $link . '/confirm-email?auth_token=' . $token;
     }
 
     # Generate a unique token
