@@ -1,3 +1,4 @@
+<?php declare(strict_types=1); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -78,7 +79,7 @@
         <?php else: ?>
                 <p>This staging site is protected.</p>
                 <p>Enter your email to receive an access link:</p>
-                <input type="email" name="email" required>
+                <input type="email" name="email" required placeholder="Email">
                 <input type="hidden" name="redirect" value="<?=$redirect?>">
                 <input type="hidden" name="csrf_token" value="<?=$_SESSION['csrf_token']?>">
                 <div style="display:none;">

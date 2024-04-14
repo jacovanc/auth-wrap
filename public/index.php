@@ -1,9 +1,11 @@
-<?php
+<?php declare(strict_types=1); 
+
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Dotenv\Dotenv;
 use App\Container;
 use App\App;
+use App\Core\Log;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../', '.env');
 $dotenv->load();
@@ -21,4 +23,12 @@ Container::setUpDependencies($container);
 
 # Include entry point for the application
 $app = new App($container);
-$app->run();
+
+try {
+    $app->run();
+} catch (\Throwable $e) {
+    Log::error($e);
+    http_response_code(500);
+    echo 'An error occurred while processing your request.';
+}
+

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1); 
 
 namespace App;
 
@@ -51,8 +51,8 @@ class App {
         
         if(!$redirect) {
             echo "No redirect specified";
-            Log::error('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
-            throw new \Exception('Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.');
+            $message = "Invalid request. No Redirect URL specified. This is needed to know which subdomain to check permissions for.";
+            throw new \Exception($message);
         }
         $this->sessionService->removeAuthenticated();
 
@@ -63,8 +63,10 @@ class App {
     public function emailSubmitRoute() {
         # Check for rate limit to avoid email spam
         $ip = $_SERVER['REMOTE_ADDR'];
-        $email = $_POST['email'] ?? null;
+        $email = $_POST['email'] ?? null ?? null;
         $redirect = $_POST['redirect'] ?? null;
+
+        // Check rate limits for IP
 
         // Check rate limits for IP
         $isRateLimited = $this->rateLimit->isRateLimited($ip, 'email_submit');
@@ -89,12 +91,7 @@ class App {
         // Basic validation
         $email = filter_var($email, FILTER_VALIDATE_EMAIL);
 
-        // If localhost, use http otherwise https
-        if (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
-            $redirect = "http://" . $redirect;
-        } else {
-            $redirect = "https://" . $redirect; // The redirect from Nginx will never contain a protocol, and we want to force HTTPS
-        }
+        $redirect = Helper::addSchema($redirect);
         $redirect = filter_var($redirect, FILTER_VALIDATE_URL); // This will later also be checked against a whitelist of allowed domains inside the handleEmailSubmit function, which prevents open redirect exploits
 
         if(!$email || !$redirect) {
