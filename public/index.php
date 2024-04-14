@@ -28,5 +28,7 @@ try {
     $app->run();
 } catch (\Throwable $e) {
     Log::error($e);
+    http_response_code(500);
+    echo 'An error occurred while processing your request.';
 }
 
